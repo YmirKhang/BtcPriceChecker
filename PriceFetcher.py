@@ -45,3 +45,5 @@ print 'Polo TRY fiyat: ' , poloPriceTRY
 fark = poloPriceTRY - turkPrice
 print 'FARK: ' , fark
 print 'REEL FARK: ' , fark -(turkPrice*0.005 +poloPriceTRY*0.0025)
+
+#naber
