@@ -1,9 +1,10 @@
 import json
 from urllib2 import Request, urlopen, URLError
 from threading import Timer
-import DataHandler
 
 from time import sleep
+import DataHandler
+
 class RepeatedTimer(object):
     def __init__(self, interval, function, *args, **kwargs):
         self._timer     = None
@@ -28,6 +29,7 @@ class RepeatedTimer(object):
     def stop(self):
         self._timer.cancel()
         self.is_running = False
+
 def btcTurk():
     request = Request('https://www.btcturk.com/api/ticker')
 
@@ -62,7 +64,6 @@ def USDrate():
         print 'No price. Got an error code:', e
 
 def Report():
-    #threading._Timer(5.0,Report).start()
     datas =[]
     turkPrice = btcTurk()
     datas.append(turkPrice)
@@ -98,16 +99,22 @@ def Report():
         else:
             datas.append('BtcTurk Buy')
     print datas
-    DataHandler.appendData(datas)
+    #DataHandler.appendData(datas)
+    return datas
 
+def appendData(worksheet):
+    appData=Report()
+    DataHandler.appendData(appData,worksheet)
 
 
 #Execute the above function every 5 seconds from another thread
-DataHandler.initialize()
-rt= RepeatedTimer(5, Report)
+workbook = DataHandler.initialize()
+worksheet = DataHandler.initializeWS(workbook)
+rt= RepeatedTimer(5, appendData, worksheet)
 sleep(17)
 
-print 'multithreading'
+
+#print 'multithreading'
 #Stop the other thread
 rt.stop()
-DataHandler.savedata()
+DataHandler.savedata(workbook)
