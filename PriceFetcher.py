@@ -1,73 +1,115 @@
 import json
 from urllib2 import Request, urlopen, URLError
 from threading import Timer
+from threading import Thread
+import datetime
+from socket import timeout
+from OrderMaker import OrderMaker
 
-from time import sleep
-import DataHandler
+class PriceTick:
+    def __init__(self ):
+        self.timestamp = None
+        self.btcturk_price = None
+        self.polo_usd = None
+        self.usd_try_rate = None
+        self.polo_try = None
+        self.difference = None
+        self.diff_real = None
+        self.decision = None
 
-class RepeatedTimer(object):
-    def __init__(self, interval, function, *args, **kwargs):
-        self._timer     = None
-        self.interval   = interval
-        self.function   = function
-        self.args       = args
-        self.kwargs     = kwargs
-        self.is_running = False
-        self.start()
+    def __str__(self):
+        return "Reel Fark: " + self.diff_real + " TRY"
 
-    def _run(self):
-        self.is_running = False
-        self.start()
-        self.function(*self.args, **self.kwargs)
+    def toList(self):
+        datas = []
+        datas.append(self.btcturk_price)
+        datas.append(self.polo_usd)
+        datas.append(self.usd_try_rate)
+        datas.append(self.polo_try)
+        datas.append(self.difference)
+        datas.append(self.diff_real)
+        datas.append(self.decision)
+        datas.append(datetime.datetime.now().strftime('%m-%d-%Y-%H:%M:%S'))
+        return datas
 
-    def start(self):
-        if not self.is_running:
-            self._timer = Timer(self.interval, self._run)
-            self._timer.start()
-            self.is_running = True
+    def chooseAction(self):
+        if self.polo_try > self.btcturk_price:
+            self.difference = self.polo_try - self.btcturk_price
+            self.decision = "Buy from BtcTurk"
 
-    def stop(self):
-        self._timer.cancel()
-        self.is_running = False
+
+        elif self.polo_try < self.btcturk_price:
+            self.decision = "Buy from Poloniex"
+            self.difference = self.btcturk_price - self.polo_try
+        else:
+            self.difference = None
+            self.diff_real = None
+            self.decision = None
+            return
+
+        self.diff_real = self.difference - (self.btcturk_price * 0.005 + self.polo_try * 0.0025)
+        if self.diff_real < 30:
+            self.decision = "No Action"
+        else:
+            OrderMaker(name=self.decision).start()
+            OrderMaker(name=self.decision + ": sell from opposite website ").start()
+
 
 def btcTurk():
     request = Request('https://www.btcturk.com/api/ticker')
 
     try:
-        response = urlopen(request)
+        response = urlopen(request, timeout=2)
         data = json.loads(response.read())
         return data['last']
-    except URLError, e:
-        print 'No price. Got an error code:', e
+    except URLError as e:
+        return ("UrlError in btcTurk")
+    except timeout as e:
+        return ("TimeOut in btcTurk")
 
 def polo():
     request = Request('https://poloniex.com/public?command=returnOrderBook&currencyPair=USDT_BTC&depth=5')
 
     try:
-        response = urlopen(request)
+        response = urlopen(request, timeout=2)
         data = json.loads(response.read())
         total =0
         for value in data['asks']:
             total = total + float(value[0])
         return total/5
-    except URLError, e:
-        print 'No price. Got an error code:', e
+    except URLError as e:
+        return ("UrlError in Poloniex")
+    except timeout as e:
+        return ("TimeOut in Poloniex")
+
 
 def USDrate():
     request = Request('http://api.fixer.io/latest?base=USD')
 
     try:
-        response = urlopen(request)
+        response = urlopen(request, timeout=2)
         data = json.loads(response.read())
         return data['rates']['TRY']
-    except URLError, e:
-        print 'No price. Got an error code:', e
+    except URLError as e:
+        return ("UrlError in Parity")
+    except timeout as e:
+        return ("TimeOut in Parity")
 
 def Report():
+    p = PriceTick()
+    p.btcturk_price = btcTurk()
+    p.polo_usd = polo()
+    p.usd_try_rate = USDrate()
+    p.polo_try = p.polo_usd * p.usd_try_rate
+    p.chooseAction()
+    print p.toList()
+    return p.toList()
+
+def Report2():
     datas =[]
     turkPrice = btcTurk()
     datas.append(turkPrice)
-    print 'BTCTurk fiyat: ' , turkPrice
+    print 'BtcTurk fiyat: ' , turkPrice
     poloPriceUSD = polo()
     datas.append(poloPriceUSD)
     print 'Poloniex fiyat: ' , poloPriceUSD
@@ -98,23 +140,7 @@ def Report():
             datas.append('Poloniex Buy')
         else:
             datas.append('BtcTurk Buy')
+
+    datas.append(datetime.datetime.now().strftime('%m-%d-%Y-%H:%M:%S'))
     print datas
-    #DataHandler.appendData(datas)
     return datas
-
-def appendData(worksheet):
-    appData=Report()
-    DataHandler.appendData(appData,worksheet)
-
-
-#Execute the above function every 5 seconds from another thread
-workbook = DataHandler.initialize()
-worksheet = DataHandler.initializeWS(workbook)
-rt= RepeatedTimer(5, appendData, worksheet)
-sleep(17)
-
-
-#print 'multithreading'
-#Stop the other thread
-rt.stop()
-DataHandler.savedata(workbook)

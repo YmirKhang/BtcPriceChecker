@@ -1,0 +1,4 @@
+/config.py
+*.xlsx
+*.xlsx#
+*.pyc

@@ -11,9 +11,6 @@ def initialize():
     t = datetime.datetime.now()
     global globtime
     globtime = t.strftime('%m-%d-%Y-%H:%M')
-
-    #global workbook
-    #workbook=wb
     return wb
 
 
@@ -28,8 +25,6 @@ def initializeWS(wb):
 
 def appendData(datas , worksheet):
 
-
-    datas.append(datetime.datetime.now().strftime('%m-%d-%Y-%H:%M:%S'))
     worksheet.append(datas)
 
 def savedata(workbook):
