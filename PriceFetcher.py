@@ -1,10 +1,10 @@
 import json
 from urllib2 import Request, urlopen, URLError
 from threading import Timer
-from threading import Thread
 import datetime
 from socket import timeout
 from OrderMaker import OrderMaker
+from multiprocessing.pool import ThreadPool
 
 class PriceTick:
     def __init__(self ):
@@ -105,42 +105,23 @@ def Report():
     print p.toList()
     return p.toList()
 
-def Report2():
-    datas =[]
-    turkPrice = btcTurk()
-    datas.append(turkPrice)
-    print 'BtcTurk fiyat: ' , turkPrice
-    poloPriceUSD = polo()
-    datas.append(poloPriceUSD)
-    print 'Poloniex fiyat: ' , poloPriceUSD
-    UsdTryRate = USDrate()
-    datas.append(USDrate())
-    print 'Dolar kuru: ' , UsdTryRate
-    poloPriceTRY = poloPriceUSD *UsdTryRate
-    datas.append(poloPriceTRY)
-    print 'Polo TRY fiyat: ' , poloPriceTRY
-    fark = poloPriceTRY - turkPrice
-    choice=0
-    if fark < 0:
-        fark = fark * -1
-        choice =1
-        print 'POLONIEXTEN ALMAK MANTIKLI'
-    else:
-        choice =2
-        print 'BTCTURKTEN ALMAK MANTIKLI'
-    print 'FARK: ' , fark
-    datas.append(fark)
-    reelfark = fark -(turkPrice*0.005 +poloPriceTRY*0.0025)
-    datas.append(reelfark)
-    print 'REEL FARK: ' , reelfark
-    if reelfark < 0:
-        datas.append('No Action')
-    else:
-        if choice == 1:
-            datas.append('Poloniex Buy')
-        else:
-            datas.append('BtcTurk Buy')
+# MultiThreaded version of the Report function
+def ReportMulti():
 
-    datas.append(datetime.datetime.now().strftime('%m-%d-%Y-%H:%M:%S'))
-    print datas
-    return datas
+    pool = ThreadPool(processes=3)
+
+    btcturk_result = pool.apply_async(btcTurk,)
+    usd_try_result = pool.apply_async(USDrate, )
+    poloniex_result = pool.apply_async(polo, )
+
+
+    p = PriceTick()
+    p.btcturk_price = btcturk_result.get()
+    p.polo_usd = poloniex_result.get()
+    p.usd_try_rate = usd_try_result.get()
+    p.polo_try = p.polo_usd * p.usd_try_rate
+    p.chooseAction()
+    print p.toList()
+    return p.toList()
+
+

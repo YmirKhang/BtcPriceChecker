@@ -142,9 +142,9 @@ class poloniex:
 
 
 
-p= poloniex(APIKey=config.key,Secret=config.secret)
-print p.returnBalances()['ZEC']
-print p.buy(currencyPair='XMR_ZEC',rate=4.3,amount=0.0001)
-sleep(5)
-data=p.returnBalances()
-print data['ZEC']
+#p= poloniex(APIKey=config.key,Secret=config.secret)
+#print p.returnBalances()['ZEC']
+#print p.buy(currencyPair='XMR_ZEC',rate=4.3,amount=0.0001)
+#sleep(5)
+#data=p.returnBalances()
+#print data['ZEC']

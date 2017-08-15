@@ -16,7 +16,7 @@ class Runner:
     def tick(self):
         self.tick_count+=1
         try:
-            tickdata=PriceFetcher.Report()
+            tickdata=PriceFetcher.ReportMulti()
             DataHandler.appendData(tickdata, self.worksheet)
         except Exception as e:
             self.stop(exception=e)
