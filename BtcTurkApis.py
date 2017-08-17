@@ -2,8 +2,10 @@ import urllib
 import urllib2
 import json
 import time
-import hmac, hashlib
+from hmac import new as hmac
+import hashlib
 import config
+import base64
 
 def createTimeStamp(datestr, format="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, format))
@@ -27,18 +29,29 @@ class BtcTurk:
         return after
 
     def returnBalances(self):
-
-        message = config.key_btcturk + str(int(time.time()))
-
-        sign = hmac.new(hashlib.sha256(config.secret_btcturk.decode('base64').encode('hex')), message  ).hexdigest()
+        signature = self.authSignature()
         headers = {
-            'X-PCK': config.key_btcturk ,
-            'X_Stamp': int(time.time()) ,
-            'X-Signature': sign.decode('hex').encode('base64')
+            "X-PCK": self.APIKey ,
+            "X-Stamp": str(int(time.time())) ,
+            "X-Signature": signature
         }
 
-        ret = urllib2.urlopen(urllib2.Request('https://www.btcturk.com/api/ticker/balance', headers))
+        try:
+            ret = urllib2.urlopen(urllib2.Request('https://www.btcturk.com/api/balance', headers=headers))
+        except urllib2.HTTPError as e:
+            print e.code
+            print e.read()
         return  json.loads(ret.read())
 
-b = BtcTurk(APIKey=config.key_btcturk, Secret=config.secret_btcturk)
-b.returnBalances()
+    def authSignature(self):
+        unixTime = int(time.time())
+
+        message = self.APIKey + str(unixTime)
+
+        temp= hmac(base64.b64decode(self.Secret), message, hashlib.sha256).digest()
+        return base64.b64encode(temp)
+
+
+print int(time.time())
+b= BtcTurk(APIKey=config.key_btcturk,Secret=config.secret_btcturk)
+print b.returnBalances()
